@@ -22,7 +22,7 @@ export function FeatureCard({ icon, title, description, gradient }: FeatureCardP
         gradient
       )} />
       
-      <div className="relative">
+      <div className="relative p-[23px]" style={{padding:"23px"}} >
         <div className="text-4xl mb-4">{icon}</div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
           {title}

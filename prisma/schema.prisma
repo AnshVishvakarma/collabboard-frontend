@@ -11,14 +11,19 @@
 //   provider = "mysql"
 //   url      = env("DATABASE_URL")
 // }
-
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
 enum UserStatus {
   ONLINE
   OFFLINE
+  AWAY
+  BUSY
 }
 
 enum WorkspaceRole {
@@ -53,19 +58,32 @@ model User {
 
   workspaces       Workspace[]         @relation("WorkspaceCreator")
   workspaceMembers WorkspaceMember[]
-  channels          Channel[]          @relation("ChannelCreator")
-  channelMembers    ChannelMember[]
-  sentMessages      Message[]          @relation("SenderMessages")
-  createdBoards     Board[]
-  createdTasks      Task[]             @relation("TaskCreator")
-  taskMembers       TaskMember[]
-  createdNotes      Note[]
-  uploadedFiles     File[]
-  notifications     Notification[]
-  sessions          UserSession[]
+  channels         Channel[]          @relation("ChannelCreator")
+  channelMembers   ChannelMember[]
+  sentMessages     Message[]          @relation("SenderMessages")
+  createdBoards    Board[]
+  createdTasks     Task[]             @relation("TaskCreator")
+  taskMembers      TaskMember[]
+  createdNotes     Note[]
+  uploadedFiles    File[]
+  notifications    Notification[]
+  sessions         UserSession[]
 
-  sentDMs           DirectMessage[]    @relation("SenderDM")
-  receivedDMs       DirectMessage[]    @relation("ReceiverDM")
+  sentDMs          DirectMessage[]    @relation("SenderDM")
+  receivedDMs      DirectMessage[]    @relation("ReceiverDM")
+}
+
+model UserSession {
+  id            String   @id @default(cuid())
+  userId        BigInt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @db.VarChar(500)   
+  refreshToken String  @db.VarChar(500)   
+  ipAddress   String?  @db.VarChar(45)   // ✅ MUST HAVE THIS
+  userAgent   String?  @db.VarChar(255) 
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Workspace {
@@ -279,15 +297,5 @@ model DirectMessage {
   receiver         User @relation("ReceiverDM", fields: [receiverId], references: [id])
 }
 
-model UserSession {
-  id              BigInt @id @default(autoincrement())
 
-  userId           BigInt
-  token            String @db.LongText
-  deviceName       String?
-  ipAddress        String?
-  expiresAt        DateTime
-
-  user             User @relation(fields: [userId], references: [id])
-}
 

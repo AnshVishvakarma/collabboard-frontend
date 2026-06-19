@@ -10,7 +10,7 @@ interface TestimonialCardProps {
 
 export function TestimonialCard({ name, role, content, rating, avatar }: TestimonialCardProps) {
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+    <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100" style={{padding:"23px"}}>
       <div className="flex items-center gap-1 mb-4">
         {[...Array(rating)].map((_, i) => (
           <svg key={i} className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">

@@ -26,7 +26,8 @@
     "paths": {
       "@/*": [
         "./*"
-      ]
+      ],
+      "@/prisma/generated/client": ["./prisma/generated/client"]
     }
   },
   "include": [

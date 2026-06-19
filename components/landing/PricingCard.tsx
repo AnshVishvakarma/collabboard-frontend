@@ -19,7 +19,7 @@ export function PricingCard({ name, price, description, features, buttonText, is
       isPopular 
         ? 'border-blue-500 shadow-lg shadow-blue-500/10 scale-105' 
         : 'border-gray-200 hover:shadow-md hover:border-blue-200'
-    )}>
+    )} style={{padding:"23px"}}>
       {isPopular && (
         <span className="inline-block px-3 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full mb-4">
           Most Popular
