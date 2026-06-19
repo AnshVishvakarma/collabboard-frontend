@@ -1,0 +1,301 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "mysql"
+//   url      = env("DATABASE_URL")
+// }
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  AWAY
+  BUSY
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  VIDEO
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id               BigInt   @id @default(autoincrement())
+  name             String
+  email            String   @unique
+  password         String
+  profileImage     String?
+  status           UserStatus @default(OFFLINE)
+  lastSeen         DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspaces       Workspace[]         @relation("WorkspaceCreator")
+  workspaceMembers WorkspaceMember[]
+  channels         Channel[]          @relation("ChannelCreator")
+  channelMembers   ChannelMember[]
+  sentMessages     Message[]          @relation("SenderMessages")
+  createdBoards    Board[]
+  createdTasks     Task[]             @relation("TaskCreator")
+  taskMembers      TaskMember[]
+  createdNotes     Note[]
+  uploadedFiles    File[]
+  notifications    Notification[]
+  sessions         UserSession[]
+
+  sentDMs          DirectMessage[]    @relation("SenderDM")
+  receivedDMs      DirectMessage[]    @relation("ReceiverDM")
+}
+
+model UserSession {
+  id            String   @id @default(cuid())
+  userId        BigInt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @db.VarChar(500)   
+  refreshToken String  @db.VarChar(500)   
+  ipAddress   String?  @db.VarChar(45)   // ✅ MUST HAVE THIS
+  userAgent   String?  @db.VarChar(255) 
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Workspace {
+  id               BigInt   @id @default(autoincrement())
+  name             String
+  description      String?
+  logo             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdById      BigInt
+  createdBy        User @relation("WorkspaceCreator", fields: [createdById], references: [id])
+
+  members          WorkspaceMember[]
+  channels         Channel[]
+  boards           Board[]
+  notes            Note[]
+  files            File[]
+}
+
+model WorkspaceMember {
+  id              BigInt @id @default(autoincrement())
+
+  workspaceId     BigInt
+  userId          BigInt
+
+  role            WorkspaceRole @default(MEMBER)
+  joinedAt        DateTime @default(now())
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id])
+  user             User @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+model Channel {
+  id              BigInt @id @default(autoincrement())
+  name            String
+  description     String?
+  isPrivate       Boolean @default(false)
+
+  workspaceId      BigInt
+  createdById      BigInt
+
+  createdAt        DateTime @default(now())
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy         User @relation("ChannelCreator", fields: [createdById], references: [id])
+
+  members           ChannelMember[]
+  messages          Message[]
+}
+
+model ChannelMember {
+  id              BigInt @id @default(autoincrement())
+
+  channelId        BigInt
+  userId           BigInt
+
+  joinedAt         DateTime @default(now())
+
+  channel          Channel @relation(fields: [channelId], references: [id])
+  user             User @relation(fields: [userId], references: [id])
+
+  @@unique([channelId, userId])
+}
+
+model Message {
+  id              BigInt @id @default(autoincrement())
+
+  channelId        BigInt
+  senderId         BigInt
+
+  message          String @db.LongText
+  messageType      MessageType @default(TEXT)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  channel          Channel @relation(fields: [channelId], references: [id])
+  sender           User @relation("SenderMessages", fields: [senderId], references: [id])
+
+  attachments      MessageAttachment[]
+}
+
+model MessageAttachment {
+  id              BigInt @id @default(autoincrement())
+
+  messageId         BigInt
+  fileName          String
+  fileUrl           String
+  fileSize          BigInt?
+
+  message           Message @relation(fields: [messageId], references: [id])
+}
+
+model Board {
+  id              BigInt @id @default(autoincrement())
+
+  workspaceId      BigInt
+  createdById      BigInt
+
+  name             String
+  createdAt        DateTime @default(now())
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy         User @relation(fields: [createdById], references: [id])
+
+  columns           TaskColumn[]
+}
+
+model TaskColumn {
+  id              BigInt @id @default(autoincrement())
+
+  boardId          BigInt
+  name             String
+  position         Int
+
+  board            Board @relation(fields: [boardId], references: [id])
+
+  tasks            Task[]
+}
+
+model Task {
+  id              BigInt @id @default(autoincrement())
+
+  columnId          BigInt
+  createdById       BigInt
+
+  title             String
+  description       String? @db.LongText
+  priority          TaskPriority @default(MEDIUM)
+  dueDate           DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  column            TaskColumn @relation(fields: [columnId], references: [id])
+  createdBy         User @relation("TaskCreator", fields: [createdById], references: [id])
+
+  members           TaskMember[]
+}
+
+model TaskMember {
+  id              BigInt @id @default(autoincrement())
+
+  taskId            BigInt
+  userId            BigInt
+
+  task              Task @relation(fields: [taskId], references: [id])
+  user              User @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+}
+
+model Note {
+  id              BigInt @id @default(autoincrement())
+
+  workspaceId      BigInt
+  createdById      BigInt
+
+  title            String
+  content          String? @db.LongText
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy         User @relation(fields: [createdById], references: [id])
+}
+
+model File {
+  id              BigInt @id @default(autoincrement())
+
+  workspaceId      BigInt
+  uploadedById     BigInt
+
+  fileName         String
+  fileUrl          String
+  fileSize         BigInt?
+
+  createdAt        DateTime @default(now())
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  uploadedBy        User @relation(fields: [uploadedById], references: [id])
+}
+
+model Notification {
+  id              BigInt @id @default(autoincrement())
+
+  userId           BigInt
+  title            String
+  message          String @db.LongText
+  isRead           Boolean @default(false)
+
+  createdAt        DateTime @default(now())
+
+  user             User @relation(fields: [userId], references: [id])
+}
+
+model DirectMessage {
+  id              BigInt @id @default(autoincrement())
+
+  senderId         BigInt
+  receiverId       BigInt
+  message          String @db.LongText
+
+  createdAt        DateTime @default(now())
+
+  sender           User @relation("SenderDM", fields: [senderId], references: [id])
+  receiver         User @relation("ReceiverDM", fields: [receiverId], references: [id])
+}
+
+
+
